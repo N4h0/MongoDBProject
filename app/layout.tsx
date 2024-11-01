@@ -1,3 +1,5 @@
+//https://nextjs.org/docs/app/building-your-application/routing/layouts-and-templates - Required root layout
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
@@ -16,7 +18,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.className} 
+      m-20 p-6 text-xl font-medium`}>
+        {children} </body>
     </html>
   );
 }
