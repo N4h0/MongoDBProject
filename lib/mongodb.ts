@@ -1,3 +1,5 @@
+//For å koble til DB.
+
 import { MongoClient } from "mongodb";
 
 if (!process.env.MONGODB_URI) {
