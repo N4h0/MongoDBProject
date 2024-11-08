@@ -8,12 +8,7 @@ function DropDownDatabases() {
     const [isDropdownVisible2, setDropdownVisible2] = useState(false);
     const [databases, setDatabases] = useState([]); // State to store databases
 
-    const activeDatabase = localStorage.getItem('activeDatabase');
 
-    function handleDatabaseSelect(dbName) {
-        setActiveDatabase(dbName);
-        localStorage.setItem('activeDatabase', dbName); //Lagrer lokalt for å lagre mellom "sessions"
-    }
 
     //sett den aktive databasen når den laster
     useEffect(() => {
