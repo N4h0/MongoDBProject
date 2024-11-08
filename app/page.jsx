@@ -9,8 +9,8 @@ export default async function Home() {
       <DropDownDatabases/>
       <p></p>
 
-      <h1>"Hei, dette er frammesida. Me bruker app routing fordi serverside routing ftw."</h1>
-      <h1>"Desverre må me ha med nokre client-side komponentat, feks knappen under :("</h1>
+      <h1>Hei, dette er frammesida. Me bruker app routing fordi serverside routing ftw.</h1>
+      <h1>Desverre må me ha med nokre client-side komponentat, feks knappen under.</h1>
       <TestButton />
       <p></p>
       <Link href="/api/testConnection" className="font-medium text-blue-600 dark:text-blue-500 hover:underline">

@@ -2,7 +2,7 @@
 export default async function forestOfSpirits() {
     return(
     <>
-    Hei
+    Hei du der borte
     </>
     )
 }
