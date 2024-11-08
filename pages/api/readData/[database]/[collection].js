@@ -1,4 +1,4 @@
-import mongoClient from '../../../../lib/mongoClient';
+import mongoClient from '../../../../lib/MongoClient';
 
 export default async function handler(req, res) {
   const { database, collection } = req.query; // Get database and collection from URL parameters

@@ -42,6 +42,16 @@ function Navbar() {
                                 SpiritOfForests
                             </a>
                         </li>
+                        <li>
+                            <a href="/folderStructure"
+                                className={`block py-2 px-3 text-white ${ //These classes always apply
+                                    pathname === "/folderStructure" // Check if the current path is "/ForestofSpirits"
+                                        ? "bg-blue-700 rounded md:bg-transparent md:text-blue-700 dark:text-white md:dark:text-blue-500"// If active this happens
+                                        : ""
+                                    }`}>
+                                Folder structure
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
