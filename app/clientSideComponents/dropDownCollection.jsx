@@ -22,7 +22,8 @@ function DropDownCollection() {
 
     return (
         <>
-            <div className="relative inline-block text-left right-0">
+            <div className="relative inline-block text-left right-0"
+            onMouseLeave={handleMouseLeave}>
                 <div>
                     <button
                         type="button"
@@ -32,7 +33,7 @@ function DropDownCollection() {
                         aria-haspopup="true"
                         onClick={toggleDropdown}
                         onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
+                        
                     >
                         Options
                         <svg
