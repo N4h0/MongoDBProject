@@ -1,4 +1,6 @@
+//https://mongodb.github.io/node-mongodb-native/api-generated/mongoclient.html
 //For å koble til DB.
+//Autogenerert ved laging av fil.
 
 import { MongoClient } from "mongodb";
 

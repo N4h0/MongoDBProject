@@ -1,14 +1,12 @@
-import mongoClient from '../../../../lib/mongoClient';
+import mongoClient from '../../../lib/mongoClient';
 
 export default async function handler(req, res) {
-  const { database, collection } = req.query; // Get database and collection from URL parameters
+  const { database} = req.query; // Get database from URL parameters
 
   try {
     await mongoClient.connect(); // Connect to MongoDB if not connected already
     const db = mongoClient.db(database); // Access the specified database
-    const col = db.collection(collection); // Access the specified collection
-
-    const data = await col.find({}).toArray(); // Fetch all documents in the collection
+    const data = await getCollections();
     res.status(200).json(data); // Send data as JSON response
   } catch (error) {
     console.error("Failed to fetch data from MongoDB:", error);

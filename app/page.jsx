@@ -1,7 +1,6 @@
 import Link from "next/link";
 import TestButton from "./clientSideComponents/hentAllData"; // Import the client-side component
-import DropDownCollection from "./clientSideComponents/dropDownCollection";
-import DropDownDatabases from "./clientSideComponents/dropDownCollection";
+import DropDownDatabases from "./clientSideComponents/dropDownDatabases";
 
 
 export default async function Home() {
@@ -9,7 +8,6 @@ export default async function Home() {
     <>
       <DropDownDatabases/>
       <p></p>
-      <DropDownCollection/>
 
       <h1>"Hei, dette er frammesida. Me bruker app routing fordi serverside routing ftw."</h1>
       <h1>"Desverre må me ha med nokre client-side komponentat, feks knappen under :("</h1>
