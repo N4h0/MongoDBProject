@@ -7,19 +7,60 @@ function DropDownDatabases() {
     const [isDropdownVisible1, setDropdownVisible1] = useState(false);
     const [isDropdownVisible2, setDropdownVisible2] = useState(false);
     const [databases, setDatabases] = useState([]); // State to store databases
+    const [storedDatabase, setStoredDatabase] = useState(null);
+    const [collections, setCollections] = useState([]); //State to store collections
 
-
-
-    //sett den aktive databasen når den laster
+    // Hent alle databaser når den laster
     useEffect(() => {
-        const storedDatabase = localStorage.getItem('activeDatabase');
-        if (storedDatabase) {
-            setActiveDatabase(storedDatabase);
+        async function fetchDatabases() {
+            try {
+                const response = await fetch('/api/getAllDatabases');
+                const data = await response.json();
+                setDatabases(data); // Set the fetched databases in state
+            } catch (error) {
+                console.error("Failed to load databases:", error);
+            }
         }
-        else {
-            //set active database to the first database.
-        }
+        fetchDatabases();
     }, []);
+
+    // Hent alle databaser når den laster, set aktiv DB til den fyrste hvis aktiv DB ikkje er set.
+    useEffect(() => {
+        async function fetchDatabases() {
+            try {
+                const response = await fetch('/api/getAllDatabases');
+                const data = await response.json();
+                setDatabases(data); // Set the fetched databases in state
+                if (!storedDatabase) {
+                    setStoredDatabase(data[0])
+                }
+            } catch (error) {
+                console.error("Failed to load databases:", error);
+            }
+        }
+        fetchDatabases();
+    }, []);
+
+    // Log the storedDatabase when it changes
+    useEffect(() => {
+        if (storedDatabase) {
+            console.log("Currently stored database:", storedDatabase);
+        }
+    }, [storedDatabase]); // Dependency on storedDatabase
+
+
+    useEffect(() => { //Endre aktiv collection kvar gong me endrar aktiv DB
+        async function fetchCollections() {
+            setCollections([]);
+            if (storedDatabase) {
+                const collectionsResponse = await fetch(`/api/getCollections/${encodeURIComponent(storedDatabase)}`);
+                const collectionsData = await collectionsResponse.json();
+                setCollections(collectionsData);
+            }
+        }
+        fetchCollections();
+    }, [storedDatabase]); // Runs whenever storedDatabase changes
+
 
     const toggleDropdown1 = () => {
         setDropdownVisible1(!isDropdownVisible1);
@@ -37,20 +78,6 @@ function DropDownDatabases() {
         setDropdownVisible2(false);
     };
 
-    // Hent alle databaser når den laster
-    useEffect(() => {
-        async function fetchDatabases() {
-            try {
-                const response = await fetch('/api/getAllDatabases');
-                const data = await response.json();
-                setDatabases(data); // Set the fetched databases in state
-            } catch (error) {
-                console.error("Failed to load databases:", error);
-            }
-        }
-        fetchDatabases();
-    }, []);
-
     return (
         <>
             {/* First Dropdown */}
@@ -65,7 +92,7 @@ function DropDownDatabases() {
                         aria-haspopup="true"
                         onMouseEnter={toggleDropdown1}
                     >
-                        Database Options
+                        Database
                         <svg
                             className="-mr-1 h-5 w-5 text-gray-400"
                             viewBox="0 0 20 20"
@@ -95,7 +122,7 @@ function DropDownDatabases() {
                                 databases.map((db, index) => (
                                     <a
                                         key={index}
-                                        href="#"
+                                        onClick={() => setStoredDatabase(db)}
                                         className="block px-4 py-2 text-sm text-gray-700"
                                         role="menuitem"
                                         tabIndex="-1"
@@ -125,7 +152,7 @@ function DropDownDatabases() {
                         aria-haspopup="true"
                         onMouseEnter={toggleDropdown2}
                     >
-                        Collection Options
+                        Collections
                         <svg
                             className="-mr-1 h-5 w-5 text-gray-400"
                             viewBox="0 0 20 20"
@@ -151,8 +178,8 @@ function DropDownDatabases() {
                     >
                         <div className="py-1" role="none">
                             {/* Render the fetched databases as dropdown items */}
-                            {databases.length > 0 ? (
-                                databases.map((db, index) => (
+                            {collections.length > 0 ? (
+                                collections.map((db, index) => (
                                     <a
                                         key={index}
                                         href="#"
@@ -164,7 +191,7 @@ function DropDownDatabases() {
                                     </a>
                                 ))
                             ) : (
-                                <p className="block px-4 py-2 text-sm text-gray-700">No databases found</p>
+                                <p className="block px-4 py-2 text-sm text-gray-700">No collections found</p>
                             )}
                         </div>
                     </div>

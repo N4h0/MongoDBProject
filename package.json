@@ -9,9 +9,9 @@
     "dotenv": "^16.4.5",
     "mogodb": "^0.0.1-security",
     "mongodb": "^6.10.0",
-    "next": "latest",
-    "react": "^18",
-    "react-dom": "^18",
+    "next": "^15.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "vercel": "^37.12.1"
   },
   "devDependencies": {
