@@ -9,20 +9,9 @@ function DropDownDatabases() {
     const [databases, setDatabases] = useState([]); // State to store databases
     const [storedDatabase, setStoredDatabase] = useState(null);
     const [collections, setCollections] = useState([]); //State to store collections
+    const [storedCollection, setStoredCollection] = useState(null); //currently active collection
+    const [documents, setDocuments] = useState([]); //State to store documents
 
-    // Hent alle databaser når den laster
-    useEffect(() => {
-        async function fetchDatabases() {
-            try {
-                const response = await fetch('/api/getAllDatabases');
-                const data = await response.json();
-                setDatabases(data); // Set the fetched databases in state
-            } catch (error) {
-                console.error("Failed to load databases:", error);
-            }
-        }
-        fetchDatabases();
-    }, []);
 
     // Hent alle databaser når den laster, set aktiv DB til den fyrste hvis aktiv DB ikkje er set.
     useEffect(() => {
@@ -41,26 +30,32 @@ function DropDownDatabases() {
         fetchDatabases();
     }, []);
 
-    // Log the storedDatabase when it changes
-    useEffect(() => {
-        if (storedDatabase) {
-            console.log("Currently stored database:", storedDatabase);
-        }
-    }, [storedDatabase]); // Dependency on storedDatabase
-
-
-    useEffect(() => { //Endre aktiv collection kvar gong me endrar aktiv DB
+    useEffect(() => { //Endre aktiv collections (samling av enkelte collection :P) kvar gong me endrar aktiv DB
         async function fetchCollections() {
             setCollections([]);
             if (storedDatabase) {
                 const collectionsResponse = await fetch(`/api/getCollections/${encodeURIComponent(storedDatabase)}`);
                 const collectionsData = await collectionsResponse.json();
                 setCollections(collectionsData);
+                if (!storedCollection) { //Default er at den fyrste ollection i ei samling er aktiv, og dokumenta i den blir vist.
+                    setStoredCollection(collectionsData[0])
+                }
             }
         }
         fetchCollections();
     }, [storedDatabase]); // Runs whenever storedDatabase changes
 
+    useEffect(() => {
+        async function fetchDocuments() {
+            setDocuments([]);
+            if (storedDatabase) {
+                const documentsResponse = await fetch(`/api/getDocuments/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`);
+                const documentsData = await documentsResponse.json();
+                setDocuments(documentsData);
+            }
+        }
+        fetchDocuments();
+    }, [storedCollection]); // Runs whenever storedColletion changes
 
     const toggleDropdown1 = () => {
         setDropdownVisible1(!isDropdownVisible1);
@@ -182,7 +177,7 @@ function DropDownDatabases() {
                                 collections.map((db, index) => (
                                     <a
                                         key={index}
-                                        href="#"
+                                        onClick={() => setStoredCollection(db)}
                                         className="block px-4 py-2 text-sm text-gray-700"
                                         role="menuitem"
                                         tabIndex="-1"
@@ -197,6 +192,26 @@ function DropDownDatabases() {
                     </div>
                 )}
             </div>
+        {/* Data */}
+        <div className="mt-4 p-4 bg-gray-100 rounded-md">
+    <h2 className="text-lg font-semibold text-gray-800 mb-2">
+        Documents in Collection: {storedCollection || "None Selected"}
+    </h2>
+    {documents.length > 0 ? (
+        <ul className="list-disc list-inside">
+            {documents.map((doc, index) => (
+                <li key={index} className="text-gray-700">
+                    {JSON.stringify(doc, null, 2)} {/* Display the document as JSON */}
+                </li>
+            ))}
+        </ul>
+    ) : (
+        <p className="text-gray-500">No documents found or loading...</p>
+    )}
+</div>
+
+
+
         </>
     );
 }
