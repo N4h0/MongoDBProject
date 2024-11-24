@@ -11,7 +11,21 @@ function DropDownDatabases() {
     const [collections, setCollections] = useState([]); //State to store collections
     const [storedCollection, setStoredCollection] = useState(null); //currently active collection
     const [documents, setDocuments] = useState([]); //State to store documents
+    const [firstDocumentInput, setFirstDocumentInput] = useState(false); //Show le input form for first document in a collection
+    const [firstDocumentData, setFirstDocumentData] = useState({}); //Maybe dont need this?
+    const [fields, setFields] = useState([{ key: "", value: "" }]); //Felt som vises i popupen
 
+    const addField = () => {
+        setFields([...fields, { key: "", value: "" }]);
+    };
+
+    // Handle input changes
+    const handleChange = (index, event) => {
+        const { name, value } = event.target;
+        const updatedFields = [...fields];
+        updatedFields[index][name] = value;
+        setFields(updatedFields);
+    };
 
     // Hent alle databaser når den laster, set aktiv DB til den fyrste hvis aktiv DB ikkje er set.
     useEffect(() => {
@@ -37,9 +51,7 @@ function DropDownDatabases() {
                 const collectionsResponse = await fetch(`/api/getCollections/${encodeURIComponent(storedDatabase)}`);
                 const collectionsData = await collectionsResponse.json();
                 setCollections(collectionsData);
-                if (!storedCollection) { //Default er at den fyrste ollection i ei samling er aktiv, og dokumenta i den blir vist.
-                    setStoredCollection(collectionsData[0])
-                }
+                setStoredCollection(collectionsData[0])
             }
         }
         fetchCollections();
@@ -56,6 +68,32 @@ function DropDownDatabases() {
         }
         fetchDocuments();
     }, [storedCollection]); // Runs whenever storedColletion changes
+
+    async function CreateNewDocument() {
+        const response = await fetch(
+            `/api/createFirstDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    data: {
+                        name: "New Item",
+                        createdAt: new Date().toISOString(),
+                        isActive: true,
+                    },
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json(); // Parse the JSON response
+        console.log("Document created:", result); // Log the success response
+    }
 
     const toggleDropdown1 = () => {
         setDropdownVisible1(!isDropdownVisible1);
@@ -76,6 +114,7 @@ function DropDownDatabases() {
     return (
         <>
             {/* First Dropdown */}
+            Active database:
             <div className="relative inline-block text-left right-0"
                 onMouseLeave={closeDropdown1}>
                 <div>
@@ -87,7 +126,7 @@ function DropDownDatabases() {
                         aria-haspopup="true"
                         onMouseEnter={toggleDropdown1}
                     >
-                        Database
+                        {storedDatabase}
                         <svg
                             className="-mr-1 h-5 w-5 text-gray-400"
                             viewBox="0 0 20 20"
@@ -132,10 +171,9 @@ function DropDownDatabases() {
                     </div>
                 )}
             </div>
-
             <p></p>
-
             {/* Second Dropdown */}
+            Active collection:
             <div className="relative inline-block text-left right-0"
                 onMouseLeave={closeDropdown2}>
                 <div>
@@ -147,7 +185,7 @@ function DropDownDatabases() {
                         aria-haspopup="true"
                         onMouseEnter={toggleDropdown2}
                     >
-                        Collections
+                        {storedCollection}
                         <svg
                             className="-mr-1 h-5 w-5 text-gray-400"
                             viewBox="0 0 20 20"
@@ -192,26 +230,108 @@ function DropDownDatabases() {
                     </div>
                 )}
             </div>
-        {/* Data */}
-        <div className="mt-4 p-4 bg-gray-100 rounded-md">
-    <h2 className="text-lg font-semibold text-gray-800 mb-2">
-        Documents in Collection: {storedCollection || "None Selected"}
-    </h2>
-    {documents.length > 0 ? (
-        <ul className="list-disc list-inside">
-            {documents.map((doc, index) => (
-                <li key={index} className="text-gray-700">
-                    {JSON.stringify(doc, null, 2)} {/* Display the document as JSON */}
-                </li>
-            ))}
-        </ul>
-    ) : (
-        <p className="text-gray-500">No documents found or loading...</p>
-    )}
-</div>
+            {/* Data */}
+            <div className="mt-4 p-4 bg-gray-100 rounded-md">
+                <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                </h2>
+                {documents.length > 0 ? (
+                    <table className="min-w-full table-auto border-collapse border border-gray-200">
+                        <thead className="bg-gray-100">
+                            <tr>
+                                {Object.keys(documents[0]).map((column, index) => (
+                                    <th
+                                        key={index}
+                                        className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700"
+                                    >
+                                        {column}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {documents.map((doc, docIndex) => (
+                                <tr key={docIndex} className="hover:bg-gray-50">
+                                    {Object.keys(doc).map((column, colIndex) => (
+                                        <td
+                                            key={colIndex}
+                                            className="border border-gray-300 px-4 py-2 text-sm text-gray-600"
+                                        >
+                                            {typeof doc[column] === "object" && doc[column] !== null
+                                                ? JSON.stringify(doc[column])
+                                                : doc[column]}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <button
+                        onClick={CreateNewDocument}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                        Create new document
+                    </button>
+                )}
 
+            </div>
+            {/* Popup */}
 
+            {firstDocumentInput}
 
+            <button
+                onClick={() => setFirstDocumentInput(true)} // Open modal
+                className="block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+                type="button"
+            >
+                Toggle modal
+            </button>
+
+            {/* Main modal, from https://flowbite.com/docs/components/modal/*/}
+            {firstDocumentInput && (
+                <div id="default-modal" tabIndex="-1" aria-hidden="true" className="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+                    <div className="relative p-4 w-full max-w-2xl max-h-full">
+                        {/* Modal content */}
+                        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                            {/* Modal header */}
+                            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                    Create new document in the <strong className="text-blue-600">{storedCollection}</strong> collection and <strong className="text-green-600">{storedDatabase}</strong> database.
+                                </h3>
+                                <button type="button"
+                                    onClick={() => setFirstDocumentInput(false)}
+                                    className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" data-modal-hide="default-modal">
+                                    <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+                                    </svg>
+                                    <span className="sr-only">Close modal</span>
+                                </button>
+                            </div>
+                            {/* Modal body */}
+                            <div className="p-4 md:p-5 space-y-4">
+                                    <form className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
+                                        <label>
+                                            Key:
+                                            <input type="text" className="text-black" name="name" />
+                                        </label>
+                                        <label>
+                                            Value:
+                                            <input type="text" className="text-black" name="name" />
+                                        </label>
+                                    </form>
+                            </div>
+                            {/* Modal footer */}
+                            <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                                <button data-modal-hide="default-modal" type="button"
+                                    onClick={() => setFirstDocumentInput(false)}
+                                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Create new document</button>
+                                <button data-modal-hide="default-modal" type="button"
+                                    onClick={() => setFirstDocumentInput(false)}
+                                    className="py-2.5 px-5 ms-3 text-sm font-6u754rweyfgregmedium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
