@@ -11,7 +11,6 @@ export default async function handler(req, res) {
         const result = await col.insertOne(data);
         return res.status(201).json({ success: true, documentId: result.insertedId });
 
-
     } else {
         console.error("Post request required!");
     }
