@@ -13,19 +13,24 @@ function DropDownDatabases() {
     const [documents, setDocuments] = useState([]); //State to store documents
     const [firstDocumentInput, setFirstDocumentInput] = useState(false); //Show le input form for first document in a collection
     const [firstDocumentData, setFirstDocumentData] = useState({}); //Maybe dont need this?
-    const [fields, setFields] = useState([{ key: "", value: "" }]); //Felt som vises i popupen
+    //https://dev.to/okafor__mary/how-to-dynamically-add-input-fields-on-button-click-in-reactjs-5298 - dynamiske input felt
+    const [inputs, setInputs] = useState([{ key: "", value: "" }]) //Input for ny verdi i tom collection
+    const handleAddInput = () => {
+        setInputs([...inputs, { key: "", value: "" }])
+    }
 
-    const addField = () => {
-        setFields([...fields, { key: "", value: "" }]);
+    const handleChange = (event, index) => {
+        let { name, value } = event.target;
+        let onChangeValue = [...inputs];
+        onChangeValue[index][name] = value;
+        setInputs(onChangeValue);
     };
 
-    // Handle input changes
-    const handleChange = (index, event) => {
-        const { name, value } = event.target;
-        const updatedFields = [...fields];
-        updatedFields[index][name] = value;
-        setFields(updatedFields);
-    };
+    const handleDeleteInput = (index) => {
+        const newArray = [...inputs];
+        newArray.splice(index, 1);
+        setInputs(newArray);
+    }
 
     // Hent alle databaser når den laster, set aktiv DB til den fyrste hvis aktiv DB ikkje er set.
     useEffect(() => {
@@ -308,16 +313,40 @@ function DropDownDatabases() {
                             </div>
                             {/* Modal body */}
                             <div className="p-4 md:p-5 space-y-4">
-                                    <form className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                                        <label>
-                                            Key:
-                                            <input type="text" className="text-black" name="name" />
-                                        </label>
-                                        <label>
-                                            Value:
-                                            <input type="text" className="text-black" name="name" />
-                                        </label>
-                                    </form>
+                                {inputs.map((item, index) => (
+                                    <div className="text-base leading-relaxed text-gray-500 dark:text-gray-400" key={index}>
+                                        Key:
+                                        <input className="text-black"
+                                            name="key"
+                                            type="text"
+                                            value={item.key}
+                                            onChange={(event) => handleChange(event, index)}
+                                        />
+                                        Value:
+                                        <input className="text-black"
+                                            name="value"
+                                            type="text"
+                                            value={item.value}
+                                            onChange={(event) => handleChange(event, index)}
+                                        />
+                                        {inputs.length > 1 && (
+                                            <button onClick={() => handleDeleteInput(index)}>Delete</button>
+                                        )}
+                                        {index === inputs.length - 1 && (
+                                            <button onClick={() => handleAddInput()}>Add</button>
+                                        )}
+                                    </div>
+                                ))}
+
+                                <div className="body">
+                                    {inputs
+                                        .filter((input) => input.key !== "") // Exclude objects where key is an empty string
+                                        .map((input, index) => (
+                                            <div key={index}>
+                                                {JSON.stringify(input)}
+                                            </div>
+                                        ))}
+                                </div>
                             </div>
                             {/* Modal footer */}
                             <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
