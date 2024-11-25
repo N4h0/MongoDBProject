@@ -26,6 +26,17 @@ function DropDownDatabases() {
         setInputs(onChangeValue);
     };
 
+    async function deleteHoverDocument(input) {
+        const url = `/api/deleteDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}/${encodeURIComponent(input)}`;
+        try {
+            console.log("input:", input)
+            const response = await fetch(url);    
+        }
+        catch (error) {
+            console.log('Error deleting document.')
+        }
+    };
+
     const handleDeleteInput = (index) => {
         const newArray = [...inputs];
         newArray.splice(index, 1);
@@ -271,6 +282,14 @@ function DropDownDatabases() {
                                                 : doc[column]}
                                         </td>
                                     ))}
+                                    <td className="inset-0 text-black text-left justify-start">
+                                        <button className="inline-flex w-full justify-center gap-x-1.5 rounded-md 
+                                        bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 
+                                        ring-inset ring-gray-300 hover:bg-gray-50"
+                                        onClick={() => deleteHoverDocument(doc._id)}>
+                                        Delete
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
