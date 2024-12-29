@@ -3,6 +3,7 @@ import mongoClient from '../../../../lib/MongoClient';
 export default async function handler(req, res) {
     const { database, collection } = req.query;
 
+    console.log("Request received:", req.body);
     if (req.method === 'POST') {
         await mongoClient.connect(); // Connect to MongoDB if not connected already
         const db = mongoClient.db(database); // Access the specified database

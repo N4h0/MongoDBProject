@@ -2,8 +2,17 @@
 "use client";
 import { useState, useEffect } from 'react';
 // usestate: https://nextjs.org/learn/react-foundations/updating-state 
+import CustomModal from './CustomModal';
 
 function DropDownDatabases() {
+    //Constants for modal
+    const [isModalOpen, setModalOpen] = useState(false);
+    const [modalTitle, setModalTitle] = useState('');
+    const [modalInputs, setModalInputs] = useState([{ key: '', value: '' }]);
+    const [apiEndpoint, setApiEndpoint] = useState('');
+    const [isAddingDatabase, setIsAddingDatabase] = useState(false);
+
+
     const [isDropdownVisible1, setDropdownVisible1] = useState(false);
     const [isDropdownVisible2, setDropdownVisible2] = useState(false);
     const [databases, setDatabases] = useState([]); // State to store databases
@@ -11,37 +20,112 @@ function DropDownDatabases() {
     const [collections, setCollections] = useState([]); //State to store collections
     const [storedCollection, setStoredCollection] = useState(null); //currently active collection
     const [documents, setDocuments] = useState([]); //State to store documents
-    const [firstDocumentInput, setFirstDocumentInput] = useState(false); //Show le input form for first document in a collection
-    const [firstDocumentData, setFirstDocumentData] = useState({}); //Maybe dont need this?
-    //https://dev.to/okafor__mary/how-to-dynamically-add-input-fields-on-button-click-in-reactjs-5298 - dynamiske input felt
     const [inputs, setInputs] = useState([{ key: "", value: "" }]) //Input for ny verdi i tom collection
-    const handleAddInput = () => {
-        setInputs([...inputs, { key: "", value: "" }])
-    }
 
-    const handleChange = (event, index) => {
-        let { name, value } = event.target;
-        let onChangeValue = [...inputs];
-        onChangeValue[index][name] = value;
-        setInputs(onChangeValue);
+    const handleModalChange = (event, index, type) => {
+        const { value } = event.target;
+        const updatedInputs = [...modalInputs];
+        updatedInputs[index][type] = value;
+        setModalInputs(updatedInputs);
     };
+
+    const handleModalAddInput = () => {
+        if (!isAddingDatabase) {
+            setModalInputs([...modalInputs, { key: '', value: '' }]);
+        }
+    };
+
+    const handleModalDeleteInput = (index) => {
+        if (!isAddingDatabase) {
+            const updatedInputs = modalInputs.filter((_, i) => i !== index);
+            setModalInputs(updatedInputs);
+        }
+    };
+
+    const handleModalSave = async () => {
+        try {
+            let payload = {};
+
+            if (modalTitle === 'Create Database') {
+                const database = modalInputs[0].key;
+                const collection = modalInputs[0].value;
+                if (database && collection) {
+                    payload = { database, collection };
+                } else {
+                    alert('Please provide both database and collection names.');
+                    return;
+                }
+            } else if (modalTitle === 'Create Collection') {
+                const database = modalInputs[0].key;
+                const collection = modalInputs[0].value;
+                if (database && collection) {
+                    payload = { database, collection };
+                } else {
+                    alert('Please provide both database and collection names.');
+                    return;
+                }
+            } else if (modalTitle === 'Create Document') {
+                const documentData = modalInputs.reduce((acc, input) => {
+                    if (input.key) acc[input.key] = input.value;
+                    return acc;
+                }, {});
+                if (Object.keys(documentData).length > 0) {
+                    payload = { data: documentData }; // Wrap the object in a "data" property
+                    createNewDocument(payload);
+                }
+
+            }
+
+            const response = await fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error: ${response.status} ${response.statusText}`);
+            }
+
+            console.log(`${modalTitle} successfully created.`);
+        } catch (error) {
+            console.error(`Error during ${modalTitle} creation:`, error);
+        }
+
+        setModalOpen(false);
+    };
+
+    const handleModalOpen = (title) => {
+        setModalTitle(title);
+
+        if (title === 'Create Database' || title === 'Create Collection') {
+            if (title === 'Create Database') {
+                setModalInputs([{ key: '', value: '' }]); // Database name and initial collection name
+            } else {
+                setModalInputs([{ key: storedDatabase, value: '' }]);  // Only collection name
+            }
+            setIsAddingDatabase(true); //Display DB and collection field
+            setApiEndpoint('/api/createDatabase');
+        } else if (title === 'Create Document') {
+            setModalInputs([{ key: '', value: '' }]); // Key-value pairs for document
+            setIsAddingDatabase(false);
+
+        }
+        setModalOpen(true);
+    };
+
 
     async function deleteHoverDocument(input) {
         const url = `/api/deleteDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}/${encodeURIComponent(input)}`;
         try {
             console.log("input:", input)
-            const response = await fetch(url);    
+            const response = await fetch(url);
         }
         catch (error) {
             console.log('Error deleting document.')
         }
     };
-
-    const handleDeleteInput = (index) => {
-        const newArray = [...inputs];
-        newArray.splice(index, 1);
-        setInputs(newArray);
-    }
 
     // Hent alle databaser når den laster, set aktiv DB til den fyrste hvis aktiv DB ikkje er set.
     useEffect(() => {
@@ -85,36 +169,63 @@ function DropDownDatabases() {
         fetchDocuments();
     }, [storedCollection]); // Runs whenever storedColletion changes
 
-    async function createNewDocument(input) {
-        console.log(input)
+    const createNewDocument = async (documentData) => {
+        const url = `/api/createDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`;
 
-        const formattedData = input.reduce((acc, curr) => {{
-                acc[curr.key] = curr.value;
-            }
-            return acc;
-        }, {});
-        
-        const response = await fetch(
-            `/api/createFirstDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`,
-            {
-                method: "POST",
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
                 headers: {
-                    "Content-Type": "application/json",
+                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    data: formattedData,
+                body: JSON.stringify(documentData), // Wrap the data in a "data" object
+            });
 
-                }),
+            if (!response.ok) {
+                throw new Error(`Failed to create document: ${response.statusText}`);
             }
-        );
 
-        if (!response.ok) {
-            throw new Error(`Error: ${response.status} ${response.statusText}`);
+            const result = await response.json();
+            console.log('Document created successfully:', result);
+            return result;
+        } catch (error) {
+            console.error('Error creating document:', error);
+            throw error;
         }
+    };
 
-        const result = await response.json(); // Parse the JSON response
-        console.log("Document created:", result); // Log the success response
-    }
+    const updateDocument = async (doc) => {
+        const url = `/api/updateDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}/${encodeURIComponent(doc._id)}`;
+    
+        try {
+            const { _id, ...data } = doc;
+    
+            const response = await fetch(url, {
+                method: 'PUT', // Use PUT for updates
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ data }), // Wrap data in a `data` field
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Failed to update document: ${response.statusText}`);
+            }
+    
+            const result = await response.json();
+            console.log('Document updated successfully:', result);
+        } catch (error) {
+            console.error('Error updating document:', error);
+        }
+    };
+    
+
+    const handleEditChange = (docIndex, field, value) => {
+        const updatedDocuments = [...documents];
+        updatedDocuments[docIndex][field] = value; // Update the specific field in the document
+        setDocuments(updatedDocuments);
+    };
+
 
     const toggleDropdown1 = () => {
         setDropdownVisible1(!isDropdownVisible1);
@@ -192,6 +303,11 @@ function DropDownDatabases() {
                     </div>
                 )}
             </div>
+            <button
+                onClick={() => handleModalOpen('Create Database')}
+                className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2">
+                +
+            </button>
             <p></p>
             {/* Second Dropdown */}
             Active collection:
@@ -251,6 +367,13 @@ function DropDownDatabases() {
                     </div>
                 )}
             </div>
+            <button
+                onClick={() => handleModalOpen('Create Collection')}
+                className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2">
+                +
+            </button>
+
+
             {/* Data */}
             <div className="mt-4 p-4 bg-gray-100 rounded-md">
                 <h2 className="text-lg font-semibold text-gray-800 mb-2">
@@ -272,22 +395,34 @@ function DropDownDatabases() {
                         <tbody>
                             {documents.map((doc, docIndex) => (
                                 <tr key={docIndex} className="hover:bg-gray-50">
-                                    {Object.keys(doc).map((column, colIndex) => (
-                                        <td
-                                            key={colIndex}
-                                            className="border border-gray-300 px-4 py-2 text-sm text-gray-600"
-                                        >
-                                            {typeof doc[column] === "object" && doc[column] !== null
-                                                ? JSON.stringify(doc[column])
-                                                : doc[column]}
+                                    {Object.keys(doc).map((field, colIndex) => (
+                                        <td key={colIndex} className="border border-gray-300 px-4 py-2 text-sm text-gray-600">
+                                            {field !== '_id' ? (
+                                                <input
+                                                    className="w-full bg-gray-100 border-gray-300 rounded px-2 py-1"
+                                                    type="text"
+                                                    value={doc[field] || ''}
+                                                    onChange={(e) => handleEditChange(docIndex, field, e.target.value)}
+                                                />
+                                            ) : (
+                                                doc[field] // Display _id as non-editable
+                                            )}
                                         </td>
                                     ))}
-                                    <td className="inset-0 text-black text-left justify-start">
-                                        <button className="inline-flex w-full justify-center gap-x-1.5 rounded-md 
-                                        bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 
-                                        ring-inset ring-gray-300 hover:bg-gray-50"
-                                        onClick={() => deleteHoverDocument(doc._id)}>
-                                        Delete
+                                    <td className="text-black text-left justify-start">
+                                        <button
+                                            className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-green-500 px-3 py-2 text-sm font-semibold text-white hover:bg-green-600"
+                                            onClick={() => updateDocument(doc)}
+                                        >
+                                            Update
+                                        </button>
+                                    </td>
+                                    <td className="text-black text-left justify-start">
+                                        <button
+                                            className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-red-500 px-3 py-2 text-sm font-semibold text-white hover:bg-red-600"
+                                            onClick={() => deleteHoverDocument(doc._id)}
+                                        >
+                                            Delete
                                         </button>
                                     </td>
                                 </tr>
@@ -296,100 +431,26 @@ function DropDownDatabases() {
                     </table>
                 ) : (
                     <button
-                        onClick={() => setFirstDocumentInput(true)}
+                        onClick={() => handleModalOpen('Create Document')}
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
                         Create new document
                     </button>
                 )}
 
             </div>
-            {/* Popup */}
 
-            {firstDocumentInput}
 
-            <button
-                onClick={() => setFirstDocumentInput(true)} // Open modal
-                className="block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
-                type="button"
-            >
-                Toggle modal
-            </button>
-
-            {/* Main modal, from https://flowbite.com/docs/components/modal/*/}
-            {firstDocumentInput && (
-                <div id="default-modal" tabIndex="-1" aria-hidden="true" className="overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
-                    <div className="relative p-4 w-full max-w-2xl max-h-full">
-                        {/* Modal content */}
-                        <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
-                            {/* Modal header */}
-                            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                    Create new document in the <strong className="text-blue-600">{storedCollection}</strong> collection and <strong className="text-green-600">{storedDatabase}</strong> database.
-                                </h3>
-                                <button type="button"
-                                    onClick={() => setFirstDocumentInput(false)}
-                                    className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" data-modal-hide="default-modal">
-                                    <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
-                                    </svg>
-                                    <span className="sr-only">Close modal</span>
-                                </button>
-                            </div>
-                            {/* Modal body */}
-                            <div className="p-4 md:p-5 space-y-4">
-                                {inputs.map((item, index) => (
-                                    <div className="text-base leading-relaxed text-gray-500 dark:text-gray-400" key={index}>
-                                        Key:
-                                        <input className="text-black"
-                                            name="key"
-                                            type="text"
-                                            value={item.key}
-                                            onChange={(event) => handleChange(event, index)}
-                                        />
-                                        Value:
-                                        <input className="text-black"
-                                            name="value"
-                                            type="text"
-                                            value={item.value}
-                                            onChange={(event) => handleChange(event, index)}
-                                        />
-                                        {inputs.length > 1 && (
-                                            <button onClick={() => handleDeleteInput(index)}>Delete</button>
-                                        )}
-                                        {index === inputs.length - 1 && (
-                                            <button onClick={() => handleAddInput()}>Add</button>
-                                        )}
-                                    </div>
-                                ))}
-
-                                <div className="body">
-                                    {inputs
-                                        .filter((input) => input.key !== "") // Exclude objects where key is an empty string
-                                        .map((input, index) => (
-                                            <div key={index}>
-                                                {JSON.stringify(input)}
-                                            </div>
-                                        ))}
-                                </div>
-                            </div>
-                            {/* Modal footer */}
-                            <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
-                                <button data-modal-hide="default-modal" type="button"
-                                    onClick={() => {
-                                        setFirstDocumentInput(false);
-                                        const filteredInputs = inputs.filter((input) => input.key !== "");
-                                        console.log(filteredInputs);
-                                        createNewDocument(filteredInputs);
-                                    }}
-                                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Create new document</button>
-                                <button data-modal-hide="default-modal" type="button"
-                                    onClick={() => setFirstDocumentInput(false)}
-                                    className="py-2.5 px-5 ms-3 text-sm font-6u754rweyfgregmedium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <CustomModal
+                isOpen={isModalOpen}
+                onClose={() => setModalOpen(false)}
+                title={modalTitle}
+                inputs={modalInputs}
+                onChange={handleModalChange}
+                onAddInput={handleModalAddInput}
+                onDeleteInput={handleModalDeleteInput}
+                onSave={handleModalSave}
+                isAddingDatabase={isAddingDatabase}
+            />
         </>
     );
 }
