@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 // usestate: https://nextjs.org/learn/react-foundations/updating-state 
-import CustomModal from './customModal';
+import CustomModal from './CustomModal.js';
 
 function DropDownDatabases() {
     //Constants for modal
