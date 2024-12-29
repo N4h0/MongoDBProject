@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 // usestate: https://nextjs.org/learn/react-foundations/updating-state 
-import CustomModal from './CustomModal';
+import CustomModal from './customModal';
 
 function DropDownDatabases() {
     //Constants for modal
@@ -12,7 +12,6 @@ function DropDownDatabases() {
     const [apiEndpoint, setApiEndpoint] = useState('');
     const [isAddingDatabase, setIsAddingDatabase] = useState(false);
 
-
     const [isDropdownVisible1, setDropdownVisible1] = useState(false);
     const [isDropdownVisible2, setDropdownVisible2] = useState(false);
     const [databases, setDatabases] = useState([]); // State to store databases
@@ -21,7 +20,52 @@ function DropDownDatabases() {
     const [storedCollection, setStoredCollection] = useState(null); //currently active collection
     const [documents, setDocuments] = useState([]); //State to store documents
     const [inputs, setInputs] = useState([{ key: "", value: "" }]) //Input for ny verdi i tom collection
+    const [newDocument, setNewDocument] = useState(null); // State for the new row
 
+    //Update newDocument state when the input fields change
+    const handleNewDocumentChange = (field, value) => {
+        setNewDocument((prev) => ({ ...prev, [field]: value }));
+    };
+
+    // Add a new row to the table to create a new document with existing keys
+    const handleAddNewRow = () => {
+        if (!newDocument) {
+            // Initialize newDocument with fields from existing documents
+            setNewDocument(Object.keys(documents[0]).reduce((acc, key) => {
+                acc[key] = key === '_id' ? null : ''; // Leave _id null, other fields empty
+                return acc;
+            }, {}));
+        }
+    };
+
+    // Create a new document in the current collection with existing keys
+    const handleCreateDocument = async () => {
+        if (!newDocument) return;
+
+        try {
+            const url = `/api/createDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: newDocument }), // Send the new document
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to create document: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log('Document created:', result);
+
+            // Add the new document to the state and reset the new row
+            setDocuments((prev) => [...prev, newDocument]);
+            setNewDocument(null);
+        } catch (error) {
+            console.error('Error creating document:', error);
+        }
+    };
+
+    //Update modal input fields on change
     const handleModalChange = (event, index, type) => {
         const { value } = event.target;
         const updatedInputs = [...modalInputs];
@@ -29,12 +73,14 @@ function DropDownDatabases() {
         setModalInputs(updatedInputs);
     };
 
+    //add new input field to modal
     const handleModalAddInput = () => {
         if (!isAddingDatabase) {
             setModalInputs([...modalInputs, { key: '', value: '' }]);
         }
     };
 
+    //delete input field from modal
     const handleModalDeleteInput = (index) => {
         if (!isAddingDatabase) {
             const updatedInputs = modalInputs.filter((_, i) => i !== index);
@@ -42,6 +88,7 @@ function DropDownDatabases() {
         }
     };
 
+    //Save new database, collection or document
     const handleModalSave = async () => {
         try {
             let payload = {};
@@ -96,6 +143,7 @@ function DropDownDatabases() {
         setModalOpen(false);
     };
 
+    //Open modal for creating database, collection or document
     const handleModalOpen = (title) => {
         setModalTitle(title);
 
@@ -115,7 +163,31 @@ function DropDownDatabases() {
         setModalOpen(true);
     };
 
+    //Delete database
+    async function deleteDatabase(input) {
+        const url = `/api/deleteDatabase/${encodeURIComponent(input)}`;
+        try {
+            console.log("input:", input)
+            const response = await fetch(url);
+        }
+        catch (error) {
+            console.log('Error deleting document.')
+        }
+    }
 
+    //Delete collection
+    async function deleteCollection(input) {
+        const url = `/api/deleteCollection/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(input)}`;
+        try {
+            console.log("input:", input)
+            const response = await fetch(url);
+        }
+        catch (error) {
+            console.log('Error deleting document.')
+        }
+    }
+
+    //Delete document
     async function deleteHoverDocument(input) {
         const url = `/api/deleteDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}/${encodeURIComponent(input)}`;
         try {
@@ -157,6 +229,7 @@ function DropDownDatabases() {
         fetchCollections();
     }, [storedDatabase]); // Runs whenever storedDatabase changes
 
+    //set documents whenever storedCollection changes
     useEffect(() => {
         async function fetchDocuments() {
             setDocuments([]);
@@ -169,6 +242,7 @@ function DropDownDatabases() {
         fetchDocuments();
     }, [storedCollection]); // Runs whenever storedColletion changes
 
+    // API call to create new document
     const createNewDocument = async (documentData) => {
         const url = `/api/createDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`;
 
@@ -194,6 +268,7 @@ function DropDownDatabases() {
         }
     };
 
+    // API call to update a document
     const updateDocument = async (doc) => {
         const url = `/api/updateDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}/${encodeURIComponent(doc._id)}`;
     
@@ -219,14 +294,14 @@ function DropDownDatabases() {
         }
     };
     
-
+    //updates fields when an user makes a change
     const handleEditChange = (docIndex, field, value) => {
         const updatedDocuments = [...documents];
         updatedDocuments[docIndex][field] = value; // Update the specific field in the document
         setDocuments(updatedDocuments);
     };
 
-
+    //dropdown toggles, should be merged and dropdown should be moved to a sepparate file
     const toggleDropdown1 = () => {
         setDropdownVisible1(!isDropdownVisible1);
     };
@@ -247,8 +322,10 @@ function DropDownDatabases() {
         <>
             {/* First Dropdown */}
             Active database:
-            <div className="relative inline-block text-left right-0"
-                onMouseLeave={closeDropdown1}>
+            <div
+                className="relative inline-block text-left right-0"
+                onMouseLeave={closeDropdown1}
+            >
                 <div>
                     <button
                         type="button"
@@ -297,7 +374,9 @@ function DropDownDatabases() {
                                     </a>
                                 ))
                             ) : (
-                                <p className="block px-4 py-2 text-sm text-gray-700">No databases found</p>
+                                <p className="block px-4 py-2 text-sm text-gray-700">
+                                    No databases found
+                                </p>
                             )}
                         </div>
                     </div>
@@ -305,14 +384,24 @@ function DropDownDatabases() {
             </div>
             <button
                 onClick={() => handleModalOpen('Create Database')}
-                className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2">
+                className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2"
+            >
                 +
             </button>
+            <button
+                onClick={() => deleteDatabase(storedDatabase)}
+                className="inline-flex items-center justify-center w-6 h-6 bg-red-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2"
+            >
+                -
+            </button>
             <p></p>
+    
             {/* Second Dropdown */}
             Active collection:
-            <div className="relative inline-block text-left right-0"
-                onMouseLeave={closeDropdown2}>
+            <div
+                className="relative inline-block text-left right-0"
+                onMouseLeave={closeDropdown2}
+            >
                 <div>
                     <button
                         type="button"
@@ -347,7 +436,6 @@ function DropDownDatabases() {
                         tabIndex="-1"
                     >
                         <div className="py-1" role="none">
-                            {/* Render the fetched databases as dropdown items */}
                             {collections.length > 0 ? (
                                 collections.map((db, index) => (
                                     <a
@@ -361,7 +449,9 @@ function DropDownDatabases() {
                                     </a>
                                 ))
                             ) : (
-                                <p className="block px-4 py-2 text-sm text-gray-700">No collections found</p>
+                                <p className="block px-4 py-2 text-sm text-gray-700">
+                                    No collections found
+                                </p>
                             )}
                         </div>
                     </div>
@@ -369,15 +459,19 @@ function DropDownDatabases() {
             </div>
             <button
                 onClick={() => handleModalOpen('Create Collection')}
-                className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2">
+                className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2"
+            >
                 +
             </button>
-
-
-            {/* Data */}
+            <button
+                onClick={() => deleteCollection(storedCollection)}
+                className="inline-flex items-center justify-center w-6 h-6 bg-red-500 text-white text-sm font-bold rounded-full cursor-pointer hover:bg-blue-600 ml-2"
+            >
+                -
+            </button>
+    
+            {/* Data Table with New Row Feature */}
             <div className="mt-4 p-4 bg-gray-100 rounded-md">
-                <h2 className="text-lg font-semibold text-gray-800 mb-2">
-                </h2>
                 {documents.length > 0 ? (
                     <table className="min-w-full table-auto border-collapse border border-gray-200">
                         <thead className="bg-gray-100">
@@ -390,56 +484,111 @@ function DropDownDatabases() {
                                         {column}
                                     </th>
                                 ))}
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {documents.map((doc, docIndex) => (
                                 <tr key={docIndex} className="hover:bg-gray-50">
                                     {Object.keys(doc).map((field, colIndex) => (
-                                        <td key={colIndex} className="border border-gray-300 px-4 py-2 text-sm text-gray-600">
+                                        <td
+                                            key={colIndex}
+                                            className="border border-gray-300 px-4 py-2 text-sm text-gray-600"
+                                        >
                                             {field !== '_id' ? (
                                                 <input
                                                     className="w-full bg-gray-100 border-gray-300 rounded px-2 py-1"
                                                     type="text"
                                                     value={doc[field] || ''}
-                                                    onChange={(e) => handleEditChange(docIndex, field, e.target.value)}
+                                                    onChange={(e) =>
+                                                        handleEditChange(
+                                                            docIndex,
+                                                            field,
+                                                            e.target.value
+                                                        )
+                                                    }
                                                 />
                                             ) : (
-                                                doc[field] // Display _id as non-editable
+                                                doc[field]
                                             )}
                                         </td>
                                     ))}
-                                    <td className="text-black text-left justify-start">
+                                    <td>
                                         <button
-                                            className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-green-500 px-3 py-2 text-sm font-semibold text-white hover:bg-green-600"
+                                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded"
                                             onClick={() => updateDocument(doc)}
                                         >
                                             Update
                                         </button>
-                                    </td>
-                                    <td className="text-black text-left justify-start">
                                         <button
-                                            className="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-red-500 px-3 py-2 text-sm font-semibold text-white hover:bg-red-600"
-                                            onClick={() => deleteHoverDocument(doc._id)}
+                                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded ml-2"
+                                            onClick={() =>
+                                                deleteHoverDocument(doc._id)
+                                            }
                                         >
                                             Delete
                                         </button>
                                     </td>
                                 </tr>
                             ))}
+                            {newDocument && (
+                                <tr className="bg-yellow-50">
+                                    {Object.keys(newDocument).map((field, index) => (
+                                        <td
+                                            key={index}
+                                            className="border border-gray-300 px-4 py-2 text-sm text-gray-600"
+                                        >
+                                            {field !== '_id' ? (
+                                                <input
+                                                    className="w-full bg-white border-gray-300 rounded px-2 py-1"
+                                                    type="text"
+                                                    placeholder={`Enter ${field}`}
+                                                    value={newDocument[field] || ''}
+                                                    onChange={(e) =>
+                                                        handleNewDocumentChange(
+                                                            field,
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                />
+                                            ) : (
+                                                <span className="text-gray-400 italic">
+                                                    Auto-generated
+                                                </span>
+                                            )}
+                                        </td>
+                                    ))}
+                                    <td>
+                                        <button
+                                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
+                                            onClick={handleCreateDocument}
+                                        >
+                                            Create
+                                        </button>
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 ) : (
                     <button
                         onClick={() => handleModalOpen('Create Document')}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
+                    >
                         Create new document
                     </button>
                 )}
-
+                {documents.length > 0 && !newDocument && (
+                    <button
+                        onClick={handleAddNewRow}
+                        className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+                    >
+                        Add New Line
+                    </button>
+                )}
             </div>
-
-
+    
+            {/* Modal */}
             <CustomModal
                 isOpen={isModalOpen}
                 onClose={() => setModalOpen(false)}
@@ -453,6 +602,7 @@ function DropDownDatabases() {
             />
         </>
     );
+    
 }
 
 export default DropDownDatabases;
