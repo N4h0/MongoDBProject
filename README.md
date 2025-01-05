@@ -1,5 +1,12 @@
 # MongoDBProject
 
-Prosjekt for å fortsette å lære om webutvikling. Målet er å sette opp ei komplett nettside med api mot database på mongoDB og komplett CRUD. Vil også bruke Jenkins til bygging, testing og automatisering. Etterpå vil eg legge til chart.js for å kunne lage litt fancy grafar med dataen. 
+Project to learn more about web development. The website currently has complete CRUD for interaction towards a MongoDB-website.
+The website is live here: https://mongo-db-project-aqtr848im-n4h0s-projects.vercel.app/. 
+
+Goals:
+- Add automatic testing using Jenkins.
+- Use chart.js to create som fancy graphics.
+- Actually make the website look good. 
+
 
 Oppsettet til prosjektet: https://www.mongodb.com/developer/products/atlas/how-to-connect-mongodb-atlas-to-vercel-using-the-new-integration/. 
