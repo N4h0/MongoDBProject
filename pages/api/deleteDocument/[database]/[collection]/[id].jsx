@@ -11,6 +11,7 @@ export default async function handler(req, res) {
     const db = mongoClient.db(database); // Access the specified database
     const col = db.collection(collection); // Access the specified collection
     const result = await col.deleteOne({ _id: new ObjectId(id) });
+    res.status(200).json({ message: `Document ${document} deleted successfully!` });
 
   } catch (error) {
     console.error("Failed to fetch data from MongoDB:", error);

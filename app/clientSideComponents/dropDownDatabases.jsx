@@ -11,7 +11,6 @@ function DropDownDatabases() {
     const [modalInputs, setModalInputs] = useState([{ key: '', value: '' }]);
     const [apiEndpoint, setApiEndpoint] = useState('');
     const [isAddingDatabase, setIsAddingDatabase] = useState(false);
-
     const [isDropdownVisible1, setDropdownVisible1] = useState(false);
     const [isDropdownVisible2, setDropdownVisible2] = useState(false);
     const [databases, setDatabases] = useState([]); // State to store databases
@@ -19,7 +18,6 @@ function DropDownDatabases() {
     const [collections, setCollections] = useState([]); //State to store collections
     const [storedCollection, setStoredCollection] = useState(null); //currently active collection
     const [documents, setDocuments] = useState([]); //State to store documents
-    const [inputs, setInputs] = useState([{ key: "", value: "" }]) //Input for ny verdi i tom collection
     const [newDocument, setNewDocument] = useState(null); // State for the new row
 
     //Update newDocument state when the input fields change
@@ -92,7 +90,6 @@ function DropDownDatabases() {
     const handleModalSave = async () => {
         try {
             let payload = {};
-
             if (modalTitle === 'Create Database') {
                 const database = modalInputs[0].key;
                 const collection = modalInputs[0].value;
@@ -119,8 +116,10 @@ function DropDownDatabases() {
                 if (Object.keys(documentData).length > 0) {
                     payload = { data: documentData }; // Wrap the object in a "data" property
                     createNewDocument(payload);
+                    setModalOpen(false);
+                    fetchDocuments();
+                    return;
                 }
-
             }
 
             const response = await fetch(apiEndpoint, {
@@ -130,7 +129,6 @@ function DropDownDatabases() {
                 },
                 body: JSON.stringify(payload),
             });
-
             if (!response.ok) {
                 throw new Error(`Error: ${response.status} ${response.statusText}`);
             }
@@ -139,7 +137,8 @@ function DropDownDatabases() {
         } catch (error) {
             console.error(`Error during ${modalTitle} creation:`, error);
         }
-
+        if (modalTitle === 'Create Database') fetchDatabases(); //Oppdaterer databases og DB etter henta DB
+        if (modalTitle === 'Create Collection') fetchCollections(); //Oppdaterer collectiions og DB etter henta DB/collection
         setModalOpen(false);
     };
 
@@ -158,7 +157,6 @@ function DropDownDatabases() {
         } else if (title === 'Create Document') {
             setModalInputs([{ key: '', value: '' }]); // Key-value pairs for document
             setIsAddingDatabase(false);
-
         }
         setModalOpen(true);
     };
@@ -173,6 +171,7 @@ function DropDownDatabases() {
         catch (error) {
             console.log('Error deleting document.')
         }
+        fetchDatabases()
     }
 
     //Delete collection
@@ -185,6 +184,7 @@ function DropDownDatabases() {
         catch (error) {
             console.log('Error deleting document.')
         }
+        fetchCollections()
     }
 
     //Delete document
@@ -197,48 +197,53 @@ function DropDownDatabases() {
         catch (error) {
             console.log('Error deleting document.')
         }
+        fetchDocuments();
     };
+
+    //Fetch all databases
+    async function fetchDatabases() {
+        try {
+            const response = await fetch('/api/getAllDatabases');
+            const data = await response.json();
+            setDatabases(data); // Set the fetched databases in state
+            if (!storedDatabase) {
+                setStoredDatabase(data[0])
+            }
+        } catch (error) {
+            console.error("Failed to load databases:", error);
+        }
+    }
+
+    //Fetch collections for current database
+    async function fetchCollections() {
+        const collectionsResponse = await fetch(`/api/getCollections/${encodeURIComponent(storedDatabase)}`);
+        const collectionsData = await collectionsResponse.json();
+        setCollections(collectionsData);
+        setStoredCollection(collectionsData[0])
+    }
+
+    //Fetch documents for current collection
+    async function fetchDocuments() {
+        setDocuments([]);
+        if (storedDatabase) {
+            const documentsResponse = await fetch(`/api/getDocuments/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`);
+            const documentsData = await documentsResponse.json();
+            setDocuments(documentsData);
+        }
+    }
 
     // Hent alle databaser når den laster, set aktiv DB til den fyrste hvis aktiv DB ikkje er set.
     useEffect(() => {
-        async function fetchDatabases() {
-            try {
-                const response = await fetch('/api/getAllDatabases');
-                const data = await response.json();
-                setDatabases(data); // Set the fetched databases in state
-                if (!storedDatabase) {
-                    setStoredDatabase(data[0])
-                }
-            } catch (error) {
-                console.error("Failed to load databases:", error);
-            }
-        }
         fetchDatabases();
     }, []);
 
     useEffect(() => { //Endre aktiv collections (samling av enkelte collection :P) kvar gong me endrar aktiv DB
-        async function fetchCollections() {
-            setCollections([]);
-            if (storedDatabase) {
-                const collectionsResponse = await fetch(`/api/getCollections/${encodeURIComponent(storedDatabase)}`);
-                const collectionsData = await collectionsResponse.json();
-                setCollections(collectionsData);
-                setStoredCollection(collectionsData[0])
-            }
-        }
         fetchCollections();
     }, [storedDatabase]); // Runs whenever storedDatabase changes
 
+
     //set documents whenever storedCollection changes
     useEffect(() => {
-        async function fetchDocuments() {
-            setDocuments([]);
-            if (storedDatabase) {
-                const documentsResponse = await fetch(`/api/getDocuments/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}`);
-                const documentsData = await documentsResponse.json();
-                setDocuments(documentsData);
-            }
-        }
         fetchDocuments();
     }, [storedCollection]); // Runs whenever storedColletion changes
 
@@ -258,7 +263,6 @@ function DropDownDatabases() {
             if (!response.ok) {
                 throw new Error(`Failed to create document: ${response.statusText}`);
             }
-
             const result = await response.json();
             console.log('Document created successfully:', result);
             return result;
@@ -271,10 +275,10 @@ function DropDownDatabases() {
     // API call to update a document
     const updateDocument = async (doc) => {
         const url = `/api/updateDocument/${encodeURIComponent(storedDatabase)}/${encodeURIComponent(storedCollection)}/${encodeURIComponent(doc._id)}`;
-    
+
         try {
             const { _id, ...data } = doc;
-    
+
             const response = await fetch(url, {
                 method: 'PUT', // Use PUT for updates
                 headers: {
@@ -282,18 +286,18 @@ function DropDownDatabases() {
                 },
                 body: JSON.stringify({ data }), // Wrap data in a `data` field
             });
-    
+
             if (!response.ok) {
                 throw new Error(`Failed to update document: ${response.statusText}`);
             }
-    
+
             const result = await response.json();
             console.log('Document updated successfully:', result);
         } catch (error) {
             console.error('Error updating document:', error);
         }
     };
-    
+
     //updates fields when an user makes a change
     const handleEditChange = (docIndex, field, value) => {
         const updatedDocuments = [...documents];
@@ -395,7 +399,7 @@ function DropDownDatabases() {
                 -
             </button>
             <p></p>
-    
+
             {/* Second Dropdown */}
             Active collection:
             <div
@@ -469,7 +473,7 @@ function DropDownDatabases() {
             >
                 -
             </button>
-    
+
             {/* Data Table with New Row Feature */}
             <div className="mt-4 p-4 bg-gray-100 rounded-md">
                 {documents.length > 0 ? (
@@ -587,7 +591,7 @@ function DropDownDatabases() {
                     </button>
                 )}
             </div>
-    
+
             {/* Modal */}
             <CustomModal
                 isOpen={isModalOpen}
@@ -602,7 +606,7 @@ function DropDownDatabases() {
             />
         </>
     );
-    
+
 }
 
 export default DropDownDatabases;
